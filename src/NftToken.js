@@ -34,11 +34,11 @@ async function fetchNftData(near, nft) {
             ? `https://cloudflare-ipfs.com/ipfs/${tokenMedia}`
             : tokenMedia;
 
-    let mjolnearUrl = `https://mjolnear.com/nfts/${nft.contractId}/${nft.tokenId}`;
     let parasUrl = `https://paras.id/token/${nft.contractId}/${nft.tokenId}`;
-    let mintbaseUrl = null;
+    let mintbaseUrl = `https://www.mintbase.xyz/contract/${nft.contractId}/nfts/all/0`;
     let parasOwnerUrl = `https://paras.id/${ownerId}/collectibles`;
     let parasCollectionUrl = `https://paras.id/collection/${nft.contractId}`;
+    let tradeportUrl = 'https://www.tradeport.xyz/near/collection/shitzu.bodega-lab.near?tokenId=909'
 
     let ownerUrl = parasOwnerUrl;
     let storeUrl = parasCollectionUrl;
@@ -47,18 +47,10 @@ async function fetchNftData(near, nft) {
     let title = tokenMetadata?.title;
     let description = tokenMetadata.description || nftMetadata.name;
 
-    if (!tokenMedia && tokenMetadata.reference && nftMetadata.baseUri === "https://arweave.net") {
-      const res = await fetch(`${nftMetadata.baseUri}/${tokenMetadata.reference}`);
-      const reference = keysToCamel(await (res.json()));
-      if (reference) {
-        imageUrl = reference.media;
-        title = reference.title;
-        description = reference.description;
-        tokenUrl = `https://mintbase.io/thing/${tokenMetadata.reference}:${nft.contractId}`;
-        ownerUrl = `https://mintbase.io/human/${ownerId}`;
-        storeUrl = `https://mintbase.io/store/${nft.contractId}`;
-        mintbaseUrl = tokenUrl;
-      }
+    if (tokenMetadata.reference) {
+      const components = tokenMetadata.reference.split('/');
+      tokenUrl = `https://mintbase.io/thing/${components[components.length - 1]}:${nft.contractId}`;
+      mintbaseUrl = tokenUrl;
     }
 
 
@@ -70,9 +62,9 @@ async function fetchNftData(near, nft) {
       parasOwnerUrl,
       parasCollectionUrl,
       imageUrl,
-      mjolnearUrl,
       parasUrl,
       mintbaseUrl,
+      tradeportUrl,
       tokenUrl,
       ownerUrl,
       storeUrl,
@@ -134,16 +126,15 @@ export default function NftToken(props) {
         </div>
       </div>
       <div className="card__footer">
+        <a target="_blank" rel="noreferrer" href={nftData.mintbaseUrl + '?affiliateAccount=slimedragon.near'}>
+          Mintbase
+        </a>
+        <a target="_blank" rel="noreferrer" href={nftData.tradeportUrl}>
+          Tradeport
+        </a>
         <a target="_blank" rel="noreferrer" href={nftData.parasUrl}>
           Paras
         </a>
-        <a target="_blank" rel="noreferrer" href={nftData.mjolnearUrl}>
-          MjolNear
-        </a>
-        {nftData.mintbaseUrl && (
-        <a target="_blank" rel="noreferrer" href={nftData.mintbaseUrl}>
-          Mintbase
-        </a>)}
       </div>
     </div>
   ) : (
