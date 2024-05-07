@@ -4,31 +4,19 @@ import NftToken from "./NftToken";
 
 let globalIndex = 0;
 
-const nftFilter = [{
-  status: "SUCCESS",
-  event: {
-    standard: "nep171",
-    event: "nft_mint",
-  }
-}, {
-  status: "SUCCESS",
-  event: {
-    standard: "nep171",
-    event: "nft_transfer",
-  }
-}];
+const nftMintFilter = {};
+const nftTransferFilter = {};
 
+let reconnectTimeouts = {};
 
-let reconnectTimeout = null;
-
-function listenToNFT(processEvents) {
-  const scheduleReconnect = (timeOut) => {
-    if (reconnectTimeout) {
-      clearTimeout(reconnectTimeout);
-      reconnectTimeout = null;
+function listenToNFT(processEvent, url, filter) {
+  const scheduleReconnect = (timeOut, url, filter) => {
+    if (reconnectTimeouts[url]) {
+      clearTimeout(reconnectTimeouts[url]);
+      reconnectTimeouts[url] = null;
     }
-    reconnectTimeout = setTimeout(() => {
-      listenToNFT(processEvents);
+    reconnectTimeouts[url] = setTimeout(() => {
+      listenToNFT(processEvent, url, filter);
     }, timeOut);
   };
 
@@ -37,58 +25,47 @@ function listenToNFT(processEvents) {
     return;
   }
 
-  const ws = new WebSocket("wss://events.near.stream/ws");
-  // const ws = new WebSocket("ws://localhost:3006/ws");
+  const ws = new WebSocket(url);
 
   ws.onopen = () => {
     console.log(`Connection to WS has been established`);
     ws.send(
-      JSON.stringify({
-        secret: "ohyeahnftsss",
-        filter: nftFilter,
-        fetch_past_events: 20,
-      })
+      JSON.stringify(filter)
     );
   };
   ws.onclose = () => {
     console.log(`WS Connection has been closed`);
-    scheduleReconnect(1);
+    scheduleReconnect(1, url, filter);
   };
   ws.onmessage = (e) => {
     const data = JSON.parse(e.data);
-    processEvents(data.events);
+    processEvent(data);
   };
   ws.onerror = (err) => {
     console.log("WebSocket error", err);
   };
 }
 
-// async function fetchEvents() {
-//   const res = await fetch("https://events.near.stream/events", {
-//     method: "POST",
-//     headers: { "Content-Type": "application/json" },
-//     body: JSON.stringify({
-//       filter: nftFilter,
-//       limit: 10,
-//     }),
-//   });
-//   try {
-//     const response = await res.json();
-//     return response.events;
-//   } catch (e) {
-//     console.log(e);
-//     return [];
-//   }
-// }
+async function fetchEvents(url) {
+  const res = await fetch(url);
+  try {
+    const response = await res.json();
+    return response;
+  } catch (e) {
+    console.log(e);
+    return [];
+  }
+}
 
-function processEvent(event) {
-  const data = event?.event?.data?.[0];
-  return (data?.token_ids || []).map((tokenId) => ({
-    time: new Date(event?.blockTimestampMs),
-    contractId: event?.accountId,
-    ownerId: data?.owner_id,
+function unzipEvents(event) {
+  return event.token_ids.map((tokenId) => ({
+    time: new Date(event.block_timestamp_nanosec / 1_000_000),
+    contractId: event.contract_id,
+    oldOwnerId: event.old_owner_id,
+    newOwnerId: event.new_owner_id,
+    ownerId: event.owner_id,
     tokenId,
-    isTransfer: event?.event?.event === "nft_transfer",
+    isTransfer: event.owner_id === undefined,
     index: globalIndex++,
   }));
 }
@@ -98,25 +75,22 @@ function App() {
 
   // Setting up NFTs
   useEffect(() => {
-    const processEvents = (events) => {
-      // console.log(events);
-      events = events.flatMap(processEvent);
+    const processEvent = (event) => {
+      let events = unzipEvents(event);
       events.reverse();
       setNfts((prevState) => {
         const newNfts = [
-          ...events.filter(
-            (event) =>
-              prevState.length === 0 ||
-              event.time.getTime() > prevState[0].time.getTime()
-          ),
+          ...events,
           ...prevState,
         ];
         return newNfts.slice(0, 100);
       });
     };
 
-    // fetchEvents().then(processEvents);
-    listenToNFT(processEvents);
+    for (const [name, filter] of [["nft_mint", nftMintFilter], ["nft_transfer", nftTransferFilter]]) {
+      fetchEvents(`https://events.intear.tech/v0/nft/${name}?start_block_timestamp_nanosec=${(Date.now() - 1000 * 60 * 5) * 1_000_000}&blocks=50`).then(events => events.forEach(processEvent));
+      listenToNFT(processEvent, `wss://ws-events.intear.tech/v0/nft/${name}`, filter);
+    }
   }, []);
 
   return (
