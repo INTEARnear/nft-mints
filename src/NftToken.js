@@ -38,7 +38,7 @@ async function fetchNftData(near, nft) {
     let mintbaseUrl = `https://www.mintbase.xyz/contract/${nft.contractId}/nfts/all/0`;
     let parasOwnerUrl = `https://paras.id/${ownerId}/collectibles`;
     let parasCollectionUrl = `https://paras.id/collection/${nft.contractId}`;
-    let tradeportUrl = 'https://www.tradeport.xyz/near/collection/shitzu.bodega-lab.near?tokenId=909'
+    let tradeportUrl = 'https://www.tradeport.xyz/near/collection/${nft.contractId}?tokenId=${nft.tokenId}'
 
     let ownerUrl = parasOwnerUrl;
     let storeUrl = parasCollectionUrl;
