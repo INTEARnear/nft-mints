@@ -88,8 +88,8 @@ function App() {
     };
 
     for (const [name, filter] of [["nft_mint", nftMintFilter], ["nft_transfer", nftTransferFilter]]) {
-      fetchEvents(`https://events.intear.tech/v0/nft/${name}?start_block_timestamp_nanosec=${(Date.now() - 1000 * 60 * 5) * 1_000_000}&blocks=50`).then(events => events.forEach(processEvent));
-      listenToNFT(processEvent, `wss://ws-events.intear.tech/v0/nft/${name}`, filter);
+      fetchEvents(`https://events.intear.tech/query/${name}?start_block_timestamp_nanosec=${(Date.now() - 1000 * 60 * 5) * 1_000_000}&blocks=50`).then(events => events.forEach(processEvent));
+      listenToNFT(processEvent, `wss://ws-events.intear.tech/events/${name}`, filter);
     }
   }, []);
 
