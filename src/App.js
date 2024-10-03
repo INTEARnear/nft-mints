@@ -50,7 +50,7 @@ async function fetchEvents(url) {
   const res = await fetch(url);
   try {
     const response = await res.json();
-    return response;
+    return response.map(e => e.event);
   } catch (e) {
     console.log(e);
     return [];
@@ -88,7 +88,7 @@ function App() {
     };
 
     for (const [name, filter] of [["nft_mint", nftMintFilter], ["nft_transfer", nftTransferFilter]]) {
-      fetchEvents(`https://events.intear.tech/query/${name}?start_block_timestamp_nanosec=${(Date.now() - 1000 * 60 * 5) * 1_000_000}&blocks=50`).then(events => events.forEach(processEvent));
+      fetchEvents(`https://events.intear.tech/query/${name}?pagination_by=Newest&limit=200`).then(events => events.forEach(processEvent));
       listenToNFT(processEvent, `wss://ws-events.intear.tech/events/${name}`, filter);
     }
   }, []);
